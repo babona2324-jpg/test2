@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인사자문위원회 규정 개정 찬반 및 서명 등록부</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; }
+            .shadow-lg { box-shadow: none !important; border: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        
+        <!-- Status Banner (Firebase or LocalStorage Mode) -->
+        <div id="mode-banner" class="mb-4 p-3 rounded-xl text-xs md:text-sm font-medium text-center flex items-center justify-center gap-2 bg-blue-50 text-blue-800 border border-blue-200">
+            <span id="mode-indicator-dot" class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
+            <span id="mode-text">시스템 초기화 중...</span>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex justify-center mb-6 gap-3 no-print">
+            <button onclick="switchTab('survey')" id="tab-survey" class="px-6 py-2.5 rounded-xl font-bold text-sm transition shadow-sm bg-blue-600 text-white">
+                📝 설문 참여하기 (응답자용)
+            </button>
+            <button onclick="switchTab('admin')" id="tab-admin" class="px-6 py-2.5 rounded-xl font-bold text-sm transition shadow-sm bg-white text-gray-700 border border-gray-300 hover:bg-gray-100">
+                📊 관리자 대시보드 (집계 확인)
+            </button>
+        </div>
+
+        <!-- ================= RESPONDENT VIEW (설문 참여하기) ================= -->
+        <div id="view-survey" class="bg-white shadow-lg rounded-2xl p-6 md:p-10 border border-gray-200">
+            <!-- Header -->
+            <div class="text-center border-b-2 border-gray-800 pb-6 mb-6">
+                <p class="text-xs md:text-sm font-semibold text-gray-500 mb-1">세종여자고등학교 교무기획운영부</p>
+                <h1 class="text-xl md:text-2xl font-bold tracking-tight mb-2">인사자문위원회 규정 개정 찬반 및 서명 등록부</h1>
+                <div class="flex justify-center gap-4 text-xs md:text-sm text-gray-600 mt-2">
+                    <span><strong>■ 주제:</strong> 인사자문위원회 규정 개정</span>
+                    <span><strong>■ 일시:</strong> 2026. 10. 23.(금)</span>
+                </div>
+            </div>
+
+            <!-- Input Form -->
+            <form id="entry-form" onsubmit="handleSubmit(event)" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- 성명 입력 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">성명 <span class="text-red-500">*</span></label>
+                        <input type="text" id="input-name" required placeholder="성명을 입력하세요" 
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                    </div>
+                    <!-- 찬반 여부 선택 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">규정 개정 찬반 여부 <span class="text-red-500">*</span></label>
+                        <div class="flex gap-6 mt-3">
+                            <label class="flex items-center gap-2 cursor-pointer font-medium text-green-700 text-base">
+                                <input type="radio" name="vote" value="찬성" checked class="w-4 h-4 text-green-600"> 찬성
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer font-medium text-red-700 text-base">
+                                <input type="radio" name="vote" value="반대" class="w-4 h-4 text-red-600"> 반대
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 서명 패드 -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">서명 (마우스 또는 손가락으로 정자 서명) <span class="text-red-500">*</span></label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-xl bg-white relative overflow-hidden inline-block w-full max-w-md" style="touch-action: none;">
+                        <canvas id="signature-canvas" width="600" height="200" class="w-full h-40 cursor-crosshair bg-white block"></canvas>
+                    </div>
+                    <div class="mt-1 flex justify-between items-center max-w-md">
+                        <span id="sign-status" class="text-xs text-red-500 font-medium">서명이 입력되지 않았습니다.</span>
+                        <button type="button" onclick="clearCanvas()" class="text-xs text-gray-500 hover:text-gray-800 underline font-medium">서명 다시 쓰기</button>
+                    </div>
+                </div>
+
+                <!-- 제출 버튼 -->
+                <div class="flex justify-end pt-2">
+                    <button type="submit" id="submit-btn" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold transition shadow-md">
+                        서명 및 의견 제출하기
+                    </button>
+                </div>
+            </form>
+
+            <!-- Success Message Box -->
+            <div id="success-msg" class="hidden text-center py-12 space-y-4">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 text-green-600 rounded-full text-3xl font-bold mb-2">✓</div>
+                <h2 class="text-2xl font-bold text-gray-800">제출이 완료되었습니다!</h2>
+                <p class="text-sm text-gray-600">소중한 의견과 서명이 정상적으로 등록되었습니다.</p>
+                <div class="pt-4">
+                    <button onclick="resetForm()" class="px-6 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-sm font-semibold transition">
+                        다른 분 참여하기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= ADMIN VIEW (관리자 대시보드) ================= -->
+        <div id="view-admin" class="hidden bg-white shadow-lg rounded-2xl p-6 md:p-10 border border-gray-200">
+            <!-- Header -->
+            <div class="text-center border-b-2 border-gray-800 pb-6 mb-6">
+                <p class="text-xs md:text-sm font-semibold text-gray-500 mb-1">세종여자고등학교 교무기획운영부</p>
+                <h1 class="text-xl md:text-2xl font-bold tracking-tight mb-2">인사자문위원회 규정 개정 [관리자 대시보드]</h1>
+                <div class="flex justify-center gap-4 text-xs md:text-sm text-gray-600 mt-2">
+                    <span><strong>■ 주제:</strong> 인사자문위원회 규정 개정</span>
+                    <span><strong>■ 일시:</strong> 2026. 10. 23.(금)</span>
+                </div>
+            </div>
+
+            <!-- Summary Status Cards -->
+            <div class="grid grid-cols-3 gap-4 mb-6 text-center">
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <p class="text-xs text-gray-500 font-semibold mb-1">총 참여 인원</p>
+                    <p id="stat-total" class="text-2xl font-bold text-gray-800">0명</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-xl border border-green-200 shadow-sm">
+                    <p class="text-xs text-green-600 font-semibold mb-1">찬성</p>
+                    <p id="stat-agree" class="text-2xl font-bold text-green-700">0명</p>
+                </div>
+                <div class="bg-red-50 p-4 rounded-xl border border-red-200 shadow-sm">
+                    <p class="text-xs text-red-600 font-semibold mb-1">반대</p>
+                    <p id="stat-disagree" class="text-2xl font-bold text-red-700">0명</p>
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-3 no-print">
+                <div class="flex items-center gap-2">
+                    <h3 class="text-base font-bold text-gray-800">📋 서명 및 찬반 현황 명단</h3>
+                    <button onclick="refreshData()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-xs font-semibold transition">새로고침</button>
+                </div>
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="window.print()" class="flex-1 sm:flex-none bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-xl text-sm font-medium transition shadow-sm">인쇄 / PDF 저장</button>
+                    <button onclick="confirmResetAll()" class="flex-1 sm:flex-none bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition shadow-sm">전체 초기화</button>
+                </div>
+            </div>
+
+            <!-- Result Table -->
+            <div class="overflow-x-auto border border-gray-300 rounded-xl">
+                <table class="w-full border-collapse text-sm text-left">
+                    <thead>
+                        <tr class="bg-gray-100 border-b border-gray-300 text-gray-700 text-center">
+                            <th class="py-3 px-2 border-r border-gray-300 w-16">번호</th>
+                            <th class="py-3 px-4 border-r border-gray-300 w-32">성명</th>
+                            <th class="py-3 px-4 border-r border-gray-300 w-28">찬반 여부</th>
+                            <th class="py-3 px-4 border-r border-gray-300">서명</th>
+                            <th class="py-3 px-3 border-r border-gray-300 w-36">등록 일시</th>
+                            <th class="py-3 px-2 w-16 no-print">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="registry-tbody">
+                        <tr><td colspan="6" class="text-center py-8 text-gray-400">데이터를 불러오는 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Custom Modal (replaces alert/confirm) -->
+    <div id="custom-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
+            <h3 id="modal-title" class="text-lg font-bold text-gray-800">알림</h3>
+            <p id="modal-desc" class="text-sm text-gray-600"></p>
+            <div id="modal-buttons" class="flex justify-center gap-2 pt-2">
+                <button onclick="closeModal()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script with Firebase + LocalStorage Fallback -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'sejong-hs-regulation-2026';
+        let firebaseConfig = null;
+        try {
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                firebaseConfig = JSON.parse(__firebase_config);
+            }
+        } catch (e) {
+            console.warn("Invalid Firebase config in environment:", e);
+        }
+
+        let db = null;
+        let auth = null;
+        let isFirebaseMode = false;
+        let cachedEntries = [];
+
+        // UI Mode Banner Updater
+        function updateModeBanner(mode, message) {
+            const banner = document.getElementById('mode-banner');
+            const dot = document.getElementById('mode-indicator-dot');
+            const text = document.getElementById('mode-text');
+            if (mode === 'firebase') {
+                banner.className = "mb-4 p-3 rounded-xl text-xs md:text-sm font-medium text-center flex items-center justify-center gap-2 bg-green-50 text-green-800 border border-green-200";
+                dot.className = "w-2.5 h-2.5 rounded-full bg-green-500";
+                text.innerText = message || "☁️ 클라우드(Firebase) 실시간 동기화 모드로 작동 중입니다.";
+            } else {
+                banner.className = "mb-4 p-3 rounded-xl text-xs md:text-sm font-medium text-center flex items-center justify-center gap-2 bg-amber-50 text-amber-800 border border-amber-200";
+                dot.className = "w-2.5 h-2.5 rounded-full bg-amber-500";
+                text.innerText = message || "💾 로컬 저장소(localStorage) 모드로 작동 중입니다. (단일 기기/체험 모드)";
+            }
+        }
+
+        // Initialize Storage / Firebase with Fallback
+        async function initStorage() {
+            if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "AIzaSyDummyKeyForLocalTestingOrPreview") {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    isFirebaseMode = true;
+                    updateModeBanner('firebase');
+                    startFirebaseListener();
+                    return;
+                } catch (err) {
+                    console.warn("Firebase initialization or auth failed, falling back to localStorage:", err);
+                }
+            }
+
+            // Fallback to LocalStorage
+            isFirebaseMode = false;
+            updateModeBanner('local', '💡 로컬 저장소 모드: 현재 기기에 안전하게 데이터가 저장됩니다.');
+            loadLocalStorageEntries();
+        }
+
+        // Firebase Realtime Listener (Rule 1 & Rule 2 compliant)
+        function startFirebaseListener() {
+            if (!db) return;
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'signatures');
+            onSnapshot(colRef, (snapshot) => {
+                cachedEntries = [];
+                snapshot.forEach((docSnap) => {
+                    cachedEntries.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                cachedEntries.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+                renderTable();
+            }, (error) => {
+                console.error("Firestore snapshot error, falling back to local:", error);
+                isFirebaseMode = false;
+                updateModeBanner('local', '⚠️ 클라우드 연결 불안정으로 로컬 저장소 모드로 전환되었습니다.');
+                loadLocalStorageEntries();
+            });
+        }
+
+        // LocalStorage fallback handlers
+        function loadLocalStorageEntries() {
+            try {
+                cachedEntries = JSON.parse(localStorage.getItem('regulation_entries_fallback_v3') || '[]');
+                cachedEntries.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+            } catch (e) {
+                cachedEntries = [];
+            }
+            renderTable();
+        }
+
+        function saveLocalStorageEntries() {
+            localStorage.setItem('regulation_entries_fallback_v3', JSON.stringify(cachedEntries));
+            renderTable();
+        }
+
+        // Tab Switching
+        window.switchTab = function(tab) {
+            const surveyView = document.getElementById('view-survey');
+            const adminView = document.getElementById('view-admin');
+            const tabSurvey = document.getElementById('tab-survey');
+            const tabAdmin = document.getElementById('tab-admin');
+
+            if (tab === 'survey') {
+                surveyView.classList.remove('hidden');
+                adminView.classList.add('hidden');
+                tabSurvey.className = "px-6 py-2.5 rounded-xl font-bold text-sm transition shadow-sm bg-blue-600 text-white";
+                tabAdmin.className = "px-6 py-2.5 rounded-xl font-bold text-sm transition shadow-sm bg-white text-gray-700 border border-gray-300 hover:bg-gray-100";
+                setTimeout(initCanvas, 50);
+            } else {
+                surveyView.classList.add('hidden');
+                adminView.classList.remove('hidden');
+                tabAdmin.className = "px-6 py-2.5 rounded-xl font-bold text-sm transition shadow-sm bg-blue-600 text-white";
+                tabSurvey.className = "px-6 py-2.5 rounded-xl font-bold text-sm transition shadow-sm bg-white text-gray-700 border border-gray-300 hover:bg-gray-100";
+                renderTable();
+            }
+        };
+
+        // Custom Modal helper (replaces alert/confirm)
+        window.showModal = function(title, desc, onOk = null) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-desc').innerText = desc;
+            const btnContainer = document.getElementById('modal-buttons');
+            
+            if (onOk) {
+                btnContainer.innerHTML = `
+                    <button onclick="closeModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-sm font-semibold transition">취소</button>
+                    <button id="modal-confirm-btn" class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition">확인</button>
+                `;
+                document.getElementById('modal-confirm-btn').onclick = () => {
+                    closeModal();
+                    onOk();
+                };
+            } else {
+                btnContainer.innerHTML = `<button onclick="closeModal()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition">확인</button>`;
+            }
+            document.getElementById('custom-modal').classList.remove('hidden');
+        };
+
+        window.closeModal = function() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        };
+
+        // Signature Canvas Setup (Mobile & PC compatible)
+        const canvas = document.getElementById('signature-canvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let hasDrawn = false;
+
+        function initCanvas() {
+            if (!canvas) return;
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+        window.initCanvas = initCanvas;
+
+        window.clearCanvas = function() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasDrawn = false;
+            document.getElementById('sign-status').innerText = "서명이 입력되지 않았습니다.";
+            document.getElementById('sign-status').className = "text-xs text-red-500 font-medium";
+        };
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.clientX ?? (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+            const clientY = e.clientY ?? (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        if (canvas) {
+            canvas.addEventListener('mousedown', (e) => { 
+                isDrawing = true; 
+                hasDrawn = true; 
+                document.getElementById('sign-status').innerText = "서명이 입력되었습니다.";
+                document.getElementById('sign-status').className = "text-xs text-green-600 font-medium";
+                const pos = getPos(e); 
+                ctx.beginPath(); 
+                ctx.moveTo(pos.x, pos.y); 
+            });
+            canvas.addEventListener('mousemove', (e) => { if (!isDrawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); });
+            window.addEventListener('mouseup', () => { isDrawing = false; });
+
+            canvas.addEventListener('touchstart', (e) => { 
+                e.preventDefault(); 
+                isDrawing = true; 
+                hasDrawn = true; 
+                document.getElementById('sign-status').innerText = "서명이 입력되었습니다.";
+                document.getElementById('sign-status').className = "text-xs text-green-600 font-medium";
+                const pos = getPos(e); 
+                ctx.beginPath(); 
+                ctx.moveTo(pos.x, pos.y); 
+            }, { passive: false });
+            canvas.addEventListener('touchmove', (e) => { e.preventDefault(); if (!isDrawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); }, { passive: false });
+            canvas.addEventListener('touchend', (e) => { e.preventDefault(); isDrawing = false; }, { passive: false });
+        }
+
+        // Form Submit Handler
+        window.handleSubmit = async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('input-name').value.trim();
+            const vote = document.querySelector('input[name="vote"]:checked').value;
+
+            if (!hasDrawn) {
+                showModal("서명 필요", "서명란에 손가락이나 마우스로 정자 서명을 입력해 주세요.");
+                return;
+            }
+
+            const signatureData = canvas.toDataURL('image/png');
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.innerText = "제출 중...";
+            submitBtn.disabled = true;
+
+            const newEntry = {
+                id: 'sig_' + Date.now() + Math.random().toString(36).substr(2, 4),
+                name: name,
+                vote: vote,
+                signature: signatureData,
+                date: dateStr,
+                createdAt: Date.now()
+            };
+
+            try {
+                if (isFirebaseMode && db) {
+                    const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'signatures');
+                    await addDoc(colRef, newEntry);
+                } else {
+                    cachedEntries.push(newEntry);
+                    saveLocalStorageEntries();
+                }
+
+                document.getElementById('entry-form').classList.add('hidden');
+                document.getElementById('success-msg').classList.remove('hidden');
+            } catch (err) {
+                console.error("Submission error:", err);
+                // Fallback to local if firebase write fails
+                cachedEntries.push(newEntry);
+                saveLocalStorageEntries();
+                document.getElementById('entry-form').classList.add('hidden');
+                document.getElementById('success-msg').classList.remove('hidden');
+            } finally {
+                submitBtn.innerText = "서명 및 의견 제출하기";
+                submitBtn.disabled = false;
+            }
+        };
+
+        window.resetForm = function() {
+            document.getElementById('entry-form').reset();
+            window.clearCanvas();
+            document.getElementById('success-msg').classList.add('hidden');
+            document.getElementById('entry-form').classList.remove('hidden');
+        };
+
+        // Render Table & Stats
+        function renderTable() {
+            const tbody = document.getElementById('registry-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            let agreeCount = 0;
+            let disagreeCount = 0;
+
+            if (cachedEntries.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-400">아직 등록된 서명 내역이 없습니다.</td></tr>`;
+                document.getElementById('stat-total').innerText = "0명";
+                document.getElementById('stat-agree').innerText = "0명";
+                document.getElementById('stat-disagree').innerText = "0명";
+                return;
+            }
+
+            cachedEntries.forEach((item, index) => {
+                if (item.vote === '찬성') agreeCount++;
+                if (item.vote === '반대') disagreeCount++;
+
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-200 hover:bg-gray-50 text-center";
+                tr.innerHTML = `
+                    <td class="py-3 px-2 border-r border-gray-200 text-gray-600 font-medium">${index + 1}</td>
+                    <td class="py-3 px-4 border-r border-gray-200 font-semibold">${item.name}</td>
+                    <td class="py-3 px-4 border-r border-gray-200">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${item.vote === '찬성' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${item.vote}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 border-r border-gray-200 h-14 relative align-middle">
+                        <img src="${item.signature}" class="h-10 mx-auto object-contain" alt="서명">
+                    </td>
+                    <td class="py-3 px-3 border-r border-gray-200 text-xs text-gray-500">${item.date}</td>
+                    <td class="py-3 px-2 no-print">
+                        <button onclick="confirmDelete('${item.id}')" class="text-red-500 hover:text-red-700 text-xs font-medium">삭제</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('stat-total').innerText = `${cachedEntries.length}명`;
+            document.getElementById('stat-agree').innerText = `${agreeCount}명`;
+            document.getElementById('stat-disagree').innerText = `${disagreeCount}명`;
+        }
+
+        window.refreshData = function() {
+            if (!isFirebaseMode) {
+                loadLocalStorageEntries();
+            }
+            renderTable();
+            showModal("새로고침 완료", "최신 집계 내역을 불러왔습니다.");
+        };
+
+        window.confirmDelete = function(id) {
+            showModal("항목 삭제", "해당 서명 항목을 삭제하시겠습니까?", async () => {
+                try {
+                    if (isFirebaseMode && db) {
+                        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'signatures', id);
+                        await deleteDoc(docRef);
+                    } else {
+                        cachedEntries = cachedEntries.filter(item => item.id !== id);
+                        saveLocalStorageEntries();
+                    }
+                } catch (e) {
+                    console.error("Delete error:", e);
+                    cachedEntries = cachedEntries.filter(item => item.id !== id);
+                    saveLocalStorageEntries();
+                }
+            });
+        };
+
+        window.confirmResetAll = function() {
+            showModal("전체 초기화", "모든 교직원 서명 데이터를 초기화하시겠습니까?", async () => {
+                try {
+                    if (isFirebaseMode && db) {
+                        const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'signatures'));
+                        const deletePromises = querySnapshot.docs.map(d => deleteDoc(d.ref));
+                        await Promise.all(deletePromises);
+                    } else {
+                        cachedEntries = [];
+                        saveLocalStorageEntries();
+                    }
+                } catch (e) {
+                    console.error("Reset error:", e);
+                    cachedEntries = [];
+                    saveLocalStorageEntries();
+                }
+            });
+        };
+
+        // Initialize App on Load
+        initCanvas();
+        initStorage();
+    </script>
+</body>
+</html>
